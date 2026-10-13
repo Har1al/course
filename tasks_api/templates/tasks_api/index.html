@@ -1,0 +1,35 @@
+{% extends 'tasks_api/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+	<link rel="stylesheet" href="{% static 'css/index.css' %}">
+{% endblock %}
+
+{% block content %}
+	<header class="hero">
+		<h1>
+			<span class="prompt" aria-hidden="true">&gt;&gt;&gt;</span>
+			<span class="typed">Каталог заданий</span>
+			<span class="caret" aria-hidden="true"></span>
+		</h1>
+		<p class="lead">Откройте задание и покажите условие и примеры группе.</p>
+	</header>
+
+	<p class="notice">Демонстрационные авторские задания</p>
+
+	<form class="search" method="get" role="search">
+		<label class="sr-only" for="q">Поиск по заданиям</label>
+		<div class="field">
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+			<input type="search" name="q" id="q" value="{{ query }}" placeholder="Найти задание, урок или тему…">
+			<kbd aria-hidden="true">/</kbd>
+		</div>
+		<button type="submit">Найти</button>
+	</form>
+
+	<p class="count" hidden>Заданий: <b data-count></b></p>
+	{% if search_error %}
+		<p class="error" role="alert">{{ search_error }}</p>
+	{% endif %}
+	{% include "tasks_api/tasks.html" %}
+{% endblock %}

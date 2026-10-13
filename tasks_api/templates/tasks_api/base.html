@@ -1,0 +1,79 @@
+{% load static %}
+<!doctype html>
+<html lang="ru">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>{% block title %}{{ title }}{% endblock %}</title>
+		<script>document.documentElement.classList.add('js')</script>
+		<link rel="stylesheet" href="{% static 'css/base.css' %}">
+		{% block extra_css %}{% endblock %}
+	</head>
+	<body>
+		<a class="skip" href="#content">К содержанию</a>
+		<aside>
+			<a class="brand" href="{% url 'tasks:index' %}">PY<span>/</span>LAB</a>
+			<p class="subtitle">Каталог преподавателя</p>
+			<a class="catalog-link" href="{% url 'tasks:index' %}">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg>
+				Все задания
+			</a>
+			<nav aria-label="Модули курса">
+				{% for module in modules %}
+					<details open>
+						<summary>{{ module.title }}</summary>
+						<div class="lessons">
+							{% for lesson in module.lessons.all %}
+								{% with first_task=lesson.tasks.all|first %}
+									{% if first_task %}
+										<a class="task-link{% if task.lesson_id == lesson.id %} active{% endif %}"
+										   href="{% url 'tasks:task_detail' first_task.pk %}"{% if task.lesson_id == lesson.id %} aria-current="true"{% endif %}>{{ lesson.title }}</a>
+									{% else %}
+										<span class="task-link task-link--empty">{{ lesson.title }}</span>
+									{% endif %}
+								{% endwith %}
+							{% endfor %}
+						</div>
+					</details>
+				{% endfor %}
+			</nav>
+		</aside>
+		<main id="content">
+			{% block content %}{% endblock %}
+		</main>
+
+		<script>
+		(function () {
+			// Карточки: порядок появления и свет за курсором
+			var cards = document.querySelectorAll('.grid .card');
+			cards.forEach(function (card, i) {
+				card.style.setProperty('--i', Math.min(i, 12));
+				card.addEventListener('pointermove', function (e) {
+					var r = card.getBoundingClientRect();
+					card.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+					card.style.setProperty('--my', (e.clientY - r.top) + 'px');
+				});
+			});
+
+			// Счётчик заданий считаем по карточкам на странице
+			var count = document.querySelector('[data-count]');
+			if (count) {
+				count.textContent = cards.length;
+				count.closest('.count').hidden = false;
+			}
+
+			// Клавиша "/" открывает поиск
+			var q = document.getElementById('q');
+			if (q) {
+				document.addEventListener('keydown', function (e) {
+					if (e.key === '/' && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) {
+						e.preventDefault();
+						q.focus();
+					}
+				});
+			}
+		})();
+		</script>
+		{% block extra_js %}{% endblock %}
+	</body>
+</html>

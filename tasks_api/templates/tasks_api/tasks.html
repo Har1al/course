@@ -1,0 +1,19 @@
+<section class="grid" aria-label="Задания">
+    {% for module in modules %}
+        {% for lesson in module.lessons.all %}
+            {% for task in lesson.tasks.all %}
+                <a class="card" href="{% url 'tasks:task_detail' task.pk %}">
+                    <span class="card-lesson">{{ lesson.title }}</span>
+                    <h2>{{ task.title }}</h2>
+                    <p>{{ task.description|truncatechars:135 }}</p>
+                    <span class="card-bottom">
+                        Открыть задание
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+                    </span>
+                </a>
+            {% endfor %}
+        {% endfor %}
+    {% empty %}
+        <p class="empty">Задания не найдены. Попробуйте другое слово.</p>
+    {% endfor %}
+</section>

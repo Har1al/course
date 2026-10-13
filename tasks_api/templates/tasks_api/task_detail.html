@@ -1,0 +1,170 @@
+{% extends 'tasks_api/base.html' %}
+{% load static %}
+
+{% block title %}{{ task.title }} · {{ lesson.title }}{% endblock %}
+
+{% block extra_css %}
+	<link rel="stylesheet" href="{% static 'css/task_detail.css' %}">
+{% endblock %}
+
+{% block content %}
+	<article class="task-sheet">
+		<nav class="task-strip" aria-label="Задания урока «{{ lesson.title }}»">
+			{% for t in lesson_tasks %}
+				<a class="task-chip{% if t.pk == task.pk %} is-current{% endif %}"
+				   style="--i: {{ forloop.counter0 }}"
+				   href="{% url 'tasks:task_detail' t.pk %}"
+				   data-title="{{ t.title }}"
+				   aria-label="Задание {{ forloop.counter }}: {{ t.title }}"{% if t.pk == task.pk %} aria-current="page"{% endif %}>
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M6 8l4 4-4 4"/>
+						<path class="cur" d="M12 16h6"/>
+					</svg>
+					<span class="num" aria-hidden="true">{{ forloop.counter }}</span>
+				</a>
+			{% endfor %}
+		</nav>
+
+		<p class="crumbs">
+			<span>{{ lesson.module.title }}</span>
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+			<span class="here">{{ lesson.title }}</span>
+		</p>
+		<h1>{{ task.title }}</h1>
+
+		<div class="statement">{{ task.description }}</div>
+
+		{% with examples=task.examples.all %}
+			{% if examples %}
+				<section class="examples">
+					<div class="examples-head">
+						<h2>Примеры</h2>
+						<button type="button" class="btn-ghost" id="toggle-all" hidden>Показать все выводы</button>
+					</div>
+					{% for example in examples %}
+						<div class="example">
+							<div class="example-title">
+								<span>Пример {{ forloop.counter }}</span>
+								<button type="button" class="btn-ghost reveal" hidden>Показать вывод</button>
+							</div>
+							<div class="example-columns">
+								<section>
+									<h3>Ввод</h3>
+									<pre>{% if example.input %}{{ example.input }}{% else %}<span class="empty-input">Нет входных данных</span>{% endif %}</pre>
+								</section>
+								<section>
+									<h3>Вывод</h3>
+									<pre class="out">{{ example.output }}</pre>
+								</section>
+							</div>
+						</div>
+					{% endfor %}
+				</section>
+			{% endif %}
+		{% endwith %}
+
+		<nav class="task-pager" aria-label="Переход между заданиями" hidden>
+			<a class="pager-link pager-prev" hidden>
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg>
+				<span class="pager-text"><small>Предыдущее задание</small><b></b></span>
+			</a>
+			<a class="pager-link pager-next" hidden>
+				<span class="pager-text"><small>Следующее задание</small><b></b></span>
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+			</a>
+		</nav>
+		<p class="keys-hint" hidden>Клавиши <kbd>←</kbd> <kbd>→</kbd> переключают задания</p>
+	</article>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+	var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+	/* ---------- Вывод примеров: сначала подумайте, потом откройте ---------- */
+	var outs = [].slice.call(document.querySelectorAll('.example .out'));
+	var toggleAll = document.getElementById('toggle-all');
+
+	function btnOf(pre) { return pre.closest('.example').querySelector('.reveal'); }
+
+	function lock(pre) {
+		clearTimeout(pre._t);
+		pre.classList.remove('is-typing');
+		pre.textContent = '';
+		pre.classList.add('is-locked');
+		btnOf(pre).textContent = 'Показать вывод';
+	}
+
+	function reveal(pre) {
+		var text = pre._text;
+		pre.classList.remove('is-locked');
+		btnOf(pre).textContent = 'Скрыть вывод';
+		if (reduce) { pre.textContent = text; return; }
+		pre.classList.add('is-typing');
+		var n = 0;
+		var step = Math.max(1, Math.ceil(text.length / 60));
+		(function tick() {
+			n = Math.min(text.length, n + step);
+			pre.textContent = text.slice(0, n);
+			if (n < text.length) { pre._t = setTimeout(tick, 22); }
+			else { pre.classList.remove('is-typing'); }
+		})();
+	}
+
+	function refreshAll() {
+		if (!toggleAll) return;
+		var anyLocked = outs.some(function (p) { return p.classList.contains('is-locked'); });
+		toggleAll.textContent = anyLocked ? 'Показать все выводы' : 'Скрыть все выводы';
+	}
+
+	outs.forEach(function (pre) {
+		pre._text = pre.textContent;
+		pre.style.minHeight = pre.offsetHeight + 'px'; // чтобы страница не прыгала
+		var btn = btnOf(pre);
+		btn.hidden = false;
+		lock(pre);
+		btn.addEventListener('click', function () {
+			if (pre.classList.contains('is-locked')) reveal(pre); else lock(pre);
+			refreshAll();
+		});
+	});
+
+	if (toggleAll && outs.length) {
+		toggleAll.hidden = false;
+		toggleAll.addEventListener('click', function () {
+			var anyLocked = outs.some(function (p) { return p.classList.contains('is-locked'); });
+			outs.forEach(function (p) {
+				if (anyLocked && p.classList.contains('is-locked')) reveal(p);
+				else if (!anyLocked) lock(p);
+			});
+			refreshAll();
+		});
+	}
+
+	/* ---------- Предыдущее и следующее задание урока ---------- */
+	var chips = [].slice.call(document.querySelectorAll('.task-chip'));
+	var i = chips.findIndex(function (c) { return c.classList.contains('is-current'); });
+	var pager = document.querySelector('.task-pager');
+	if (i === -1 || chips.length < 2 || !pager) return;
+
+	function fill(link, chip) {
+		if (!chip) return;
+		link.href = chip.href;
+		link.querySelector('b').textContent = chip.dataset.title;
+		link.hidden = false;
+	}
+	fill(pager.querySelector('.pager-prev'), chips[i - 1]);
+	fill(pager.querySelector('.pager-next'), chips[i + 1]);
+	pager.hidden = false;
+	document.querySelector('.keys-hint').hidden = false;
+
+	document.addEventListener('keydown', function (e) {
+		if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+		if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+		var target = e.key === 'ArrowLeft' ? chips[i - 1] : e.key === 'ArrowRight' ? chips[i + 1] : null;
+		if (target) location.href = target.href;
+	});
+})();
+</script>
+{% endblock %}
