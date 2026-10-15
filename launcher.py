@@ -4,9 +4,17 @@
 окна (или Ctrl+C) он останавливается вместе с ним и порт освобождается.
 """
 import os
+import signal
 import socket
+import subprocess
 import sys
 from socketserver import ThreadingMixIn
+
+# macOS: PyLab.app, запущенный из Finder, не получает окна Терминала — тогда открываем себя в нём,
+# иначе приглашение со ссылкой никто не увидит
+if sys.platform == 'darwin' and getattr(sys, 'frozen', False) and not (sys.stdin and sys.stdin.isatty()):
+    subprocess.Popen(['open', '-a', 'Terminal', sys.executable])
+    sys.exit(0)
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'course.settings')
 os.environ['COURSE_DESKTOP'] = '1'
@@ -93,9 +101,17 @@ def print_welcome(url):
     print(f'{DIM}  Чтобы остановить сервер, закройте это окно или нажмите Ctrl+C{RESET}\n')
 
 
+def stop(signum, frame):
+    raise KeyboardInterrupt
+
+
 def main():
     sys.stdout.reconfigure(line_buffering=True)
     enable_ansi()
+    # Закрытие окна Терминала (SIGHUP) и kill (SIGTERM) завершают сервер так же, как Ctrl+C
+    for name in ('SIGHUP', 'SIGTERM'):
+        if hasattr(signal, name):
+            signal.signal(getattr(signal, name), stop)
     server, port = make_server()
     print_welcome(f'http://localhost:{port}/')
     try:
