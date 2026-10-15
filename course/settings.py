@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -26,6 +27,11 @@ SECRET_KEY = 'django-insecure-ej-r%y*p0hdk+_4yuft0t6u7_ro5a_)*z@e9-k#i&qf1guc#p4
 DEBUG = True
 
 ALLOWED_HOSTS = []
+
+# Режим настольного приложения (launcher.py): сайт доступен только с этого компьютера
+if os.environ.get('COURSE_DESKTOP') == '1':
+    DEBUG = False
+    ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
 
 # Application definition

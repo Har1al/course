@@ -38,6 +38,41 @@
 				{% endfor %}
 			</nav>
 		</aside>
+		<script>
+		// Меню модулей не прыгает наверх при переходе между заданиями:
+		// запоминаем прокрутку боковой панели и восстанавливаем её до отрисовки страницы
+		(function () {
+			var KEY = 'sidebar-scroll';
+			var aside = document.querySelector('aside');
+			var nav = aside.querySelector('nav');
+			var saved = null;
+			try { saved = JSON.parse(sessionStorage.getItem(KEY)); } catch (e) {}
+
+			if (saved) {
+				aside.scrollTop = saved.aside || 0;
+				nav.scrollTop = saved.nav || 0;
+			}
+
+			// Если активная тема не видна (первый заход, прямая ссылка), прокручиваем к ней
+			var active = nav.querySelector('.task-link.active');
+			if (active) {
+				var scroller = getComputedStyle(nav).overflowY === 'auto' ? nav : aside;
+				var box = scroller.getBoundingClientRect();
+				var r = active.getBoundingClientRect();
+				if (r.top < box.top || r.bottom > box.bottom) {
+					scroller.scrollTop += r.top - box.top - (box.height - r.height) / 2;
+				}
+			}
+
+			function save() {
+				try {
+					sessionStorage.setItem(KEY, JSON.stringify({ aside: aside.scrollTop, nav: nav.scrollTop }));
+				} catch (e) {}
+			}
+			window.addEventListener('pagehide', save);
+			aside.addEventListener('click', save);
+		})();
+		</script>
 		<main id="content">
 			{% block content %}{% endblock %}
 		</main>
